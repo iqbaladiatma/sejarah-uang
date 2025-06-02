@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Evolusi Uang: Sebuah Perjalanan Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f0ebe5;
+        color: #4a3b31;
+        overflow-x: hidden;
+      }
+      .nav-link.active div {
+        transform: scale(1.5);
+        background-color: #8c6d53;
+        border-color: #705643;
+      }
+      .nav-link.active span {
+        display: block !important;
+        color: #705643;
+        font-weight: bold;
+      }
+      .nav-link span {
+        color: #a68e7a;
+      }
+      .scene {
+        min-height: 100vh;
+        padding: 4rem 2rem;
+        position: relative;
+        perspective: 1000px;
+        overflow: hidden;
+      }
+      .scene-content {
+        max-width: 60rem;
+        margin: auto;
+        position: relative;
+        z-index: 10;
+      }
+      .animated-element {
+        opacity: 0;
+        transform: translateY(50px) translateZ(-100px);
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+      }
+      .animated-element.visible {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+      }
+      .parallax-bg-element {
+        position: absolute;
+        opacity: 0;
+        transition: opacity 1s ease-in-out, transform 1.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        z-index: 1;
+        user-select: none;
+        font-size: 5rem;
+        font-weight: bold;
+        color: rgba(140, 109, 83, 0.1);
+      }
+      .parallax-bg-element.visible {
+        opacity: 0.15;
+      }
+      .card-flip-3d {
+        width: 100%;
+        height: 200px;
+        perspective: 1000px;
+      }
+      .card-flip-inner-3d {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.8s;
+        transform-style: preserve-3d;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        border-radius: 0.5rem;
+      }
+      .card-flip-3d:hover .card-flip-inner-3d {
+        transform: rotateY(180deg);
+      }
+      .card-face-3d {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        border-radius: 0.5rem;
+      }
+      .card-front-3d {
+        background-color: #a68e7a;
+        color: white;
+      }
+      .card-back-3d {
+        background-color: #f8f5f1;
+        color: #4a3b31;
+        transform: rotateY(180deg);
+        border: 1px solid #ded8d1;
+      }
+      .comparison-card {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid #ded8d1;
+        transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
+        opacity: 0;
+        transform: translateX(100%) rotateY(-30deg);
+      }
+      .comparison-card.active {
+        opacity: 1;
+        transform: translateX(0) rotateY(0deg);
+        z-index: 20;
+      }
+      .comparison-card.exiting {
+        transform: translateX(-100%) rotateY(30deg);
+        opacity: 0;
+      }
+      .comparison-btn.active {
+        background-color: #8c6d53;
+        color: #ffffff;
+      }
+      .frb-diagram {
+        position: relative;
+        height: 250px;
+        width: 100%;
+        max-width: 500px;
+        margin: auto;
+        background: #f8f5f1;
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+      }
+      .frb-vault {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        width: 80px;
+        height: 80px;
+        background: #c0c0c0;
+        border: 2px solid #808080;
+        border-radius: 0.5rem;
+        text-align: center;
+        font-size: 0.75rem;
+        color: #505050;
+        padding-top: 2rem;
+      }
+      .frb-vault::before {
+        content: "VAULT";
+        position: absolute;
+        top: 0.5rem;
+        left: 0;
+        right: 0;
+      }
+      .frb-deposit,
+      .frb-reserve,
+      .frb-loan {
+        position: absolute;
+        width: 40px;
+        height: 20px;
+        border-radius: 3px;
+        background: #ffd700;
+        border: 1px solid #daa520;
+        font-size: 0.7rem;
+        text-align: center;
+        color: #8b4513;
+        box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        transition: all 1.5s ease-in-out;
+      }
+      .frb-diagram.visible .frb-deposit {
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(90px);
+        opacity: 1;
+      }
+      .frb-diagram.visible .frb-reserve {
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(170px);
+        opacity: 1;
+        transition-delay: 1.5s;
+      }
+      .frb-loan {
+        background: #e0f0e0;
+        border-color: #a0b0a0;
+      }
+      .frb-diagram.visible .frb-loan {
+        top: 1rem;
+        right: 2rem;
+        transform: translateY(90px) translateX(80px) rotate(15deg);
+        opacity: 1;
+        transition-delay: 3s;
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <div class="relative flex min-h-screen">
+      <aside class="hidden md:block sticky top-0 h-screen w-48 lg:w-64 p-8 z-50">
+        <h2 class="font-bold text-lg text-[#8C6D53] mb-8">Garis Waktu</h2>
+        <nav id="timeline-nav" class="relative">
+          <div class="absolute top-0 left-[7px] w-0.5 h-full bg-[#DED8D1] -z-10"></div>
+          <ul>
+            <li class="mb-12">
+              <a href="#hero" class="nav-link flex items-center group" data-section="hero"
+                ><div class="w-4 h-4 bg-[#DED8D1] rounded-full border-2 border-transparent transition-all duration-300"></div>
+                <span class="ml-4 text-sm font-semibold hidden group-hover:block">Mulai</span></a
+              >
+            </li>
+            <li class="mb-12">
+              <a href="#era-awal" class="nav-link flex items-center group" data-section="era-awal"
+                ><div class="w-4 h-4 bg-[#DED8D1] rounded-full border-2 border-transparent transition-all duration-300"></div>
+                <span class="ml-4 text-sm font-semibold hidden group-hover:block">Era Awal</span></a
+              >
+            </li>
+            <li class="mb-12">
+              <a href="#era-kertas" class="nav-link flex items-center group" data-section="era-kertas"
+                ><div class="w-4 h-4 bg-[#DED8D1] rounded-full border-2 border-transparent transition-all duration-300"></div>
+                <span class="ml-4 text-sm font-semibold hidden group-hover:block">Revolusi Kertas</span></a
+              >
+            </li>
+            <li class="mb-12">
+              <a href="#era-emas" class="nav-link flex items-center group" data-section="era-emas"
+                ><div class="w-4 h-4 bg-[#DED8D1] rounded-full border-2 border-transparent transition-all duration-300"></div>
+                <span class="ml-4 text-sm font-semibold hidden group-hover:block">Standar Emas</span></a
+              >
+            </li>
+            <li class="mb-12">
+              <a href="#nixon-shock" class="nav-link flex items-center group" data-section="nixon-shock"
+                ><div class="w-4 h-4 bg-[#DED8D1] rounded-full border-2 border-transparent transition-all duration-300"></div>
+                <span class="ml-4 text-sm font-semibold hidden group-hover:block">Guncangan Nixon</span></a
+              >
+            </li>
+            <li>
+              <a href="#era-fiat" class="nav-link flex items-center group" data-section="era-fiat"
+                ><div class="w-4 h-4 bg-[#DED8D1] rounded-full border-2 border-transparent transition-all duration-300"></div>
+                <span class="ml-4 text-sm font-semibold hidden group-hover:block">Dunia Uang Fiat</span></a
+              >
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <main class="flex-1">
+        <section id="hero" class="scene flex items-center justify-center text-center">
+          <div class="scene-content">
+            <h1 class="text-5xl md:text-7xl font-bold text-[#8C6D53] leading-tight animated-element" style="transition-delay: 0.2s">Dari Emas ke Kertas,</h1>
+            <h1 class="text-5xl md:text-7xl font-bold text-[#8C6D53] leading-tight animated-element" style="transition-delay: 0.4s">Lalu Mengambang Bebas</h1>
+            <p class="mt-6 text-lg md:text-xl text-gray-700 animated-element" style="transition-delay: 0.6s">
+              Sebuah perjalanan interaktif menelusuri evolusi sistem moneter global, dari barter kuno hingga kebijakan yang membentuk dunia modern.
+            </p>
+          </div>
+          <div class="parallax-bg-element" style="top: 10%; left: 10%; transform: translateZ(-300px) rotate(-15deg)">💰</div>
+          <div class="parallax-bg-element" style="bottom: 15%; right: 5%; transform: translateZ(-400px) rotate(20deg)">📜</div>
+        </section>
+
+        <section id="era-awal" class="scene">
+          <div class="scene-content">
+            <h2 class="text-4xl md:text-5xl font-bold text-[#8C6D53] mb-6 animated-element">Era Awal: Dari Barter ke Logam Mulia</h2>
+            <p class="mt-4 text-gray-700 leading-relaxed animated-element" style="transition-delay: 0.2s">
+              Sistem barter yang tidak efisien karena memerlukan "kesesuaian ganda keinginan" mendorong lahirnya uang komoditas. Emas dan perak akhirnya menjadi pilihan utama karena tahan lama, mudah dibagi, portabel, dan diterima secara
+              luas.
+            </p>
+            <div class="mt-10 grid md:grid-cols-2 gap-12 items-center">
+              <div class="flex justify-center items-center p-6 animated-element" style="transition-delay: 0.6s">
+                <div class="text-6xl">✨ 🥇 ✨</div>
+              </div>
+              <div class="animated-element" style="transition-delay: 0.4s">
+                <h3 class="font-bold text-2xl mb-3 text-[#A68E7A]">Lahirnya Koin</h3>
+                <p class="text-gray-700">
+                  Sekitar abad ke-7 SM, bangsa Lydia (kini Turki) menciptakan koin pertama dari campuran emas dan perak. Inovasi ini menstandarisasi nilai dan mempermudah perdagangan, yang kemudian diadopsi secara luas oleh peradaban lain
+                  seperti Romawi Kuno.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="era-kertas" class="scene">
+          <div class="scene-content">
+            <h2 class="text-4xl md:text-5xl font-bold text-[#8C6D53] mb-6 animated-element">Revolusi Uang Kertas & Perbankan</h2>
+            <p class="mt-4 text-gray-700 leading-relaxed animated-element" style="transition-delay: 0.2s">
+              Membawa koin berat tidak praktis. Kebutuhan efisiensi memicu lahirnya uang kertas di Tiongkok ("Jiaozi") dan Eropa ("Goldsmith's notes"), yang awalnya berfungsi sebagai bukti simpanan logam mulia.
+            </p>
+
+            <div class="mt-12 grid md:grid-cols-2 gap-12 items-start">
+              <div class="bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-lg animated-element" style="transition-delay: 0.4s">
+                <h3 class="font-bold text-2xl mb-3 text-[#A68E7A]">Lahirnya Cadangan Fraksional</h3>
+                <p class="text-gray-700">
+                  Para pandai emas di Eropa sadar tidak semua emas ditarik bersamaan. Mereka mulai meminjamkan sebagian simpanan emas, atau menerbitkan surat janji bayar (*notes*) lebih banyak dari emas yang ada. Inilah cikal bakal
+                  *Fractional Reserve Banking*.
+                </p>
+              </div>
+              <div class="animated-element" style="transition-delay: 0.6s">
+                <div class="frb-diagram">
+                  <div class="frb-deposit" title="Simpanan Emas Masuk">DEPOSIT</div>
+                  <div class="frb-vault"></div>
+                  <div class="frb-reserve" title="Cadangan Emas Disimpan">CADANGAN</div>
+                  <div class="frb-loan" title="Surat Utang/Pinjaman Dikeluarkan">PINJAMAN</div>
+                </div>
+                <p class="text-center text-sm mt-2 text-gray-600">Animasi: Simpanan masuk, sebagian jadi cadangan, sisanya dipinjamkan.</p>
+              </div>
+            </div>
+
+            <div class="mt-12 grid md:grid-cols-2 gap-8 text-sm animated-element" style="transition-delay: 0.8s">
+              <div class="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
+                <h4 class="font-bold text-[#A68E7A]">Uang Kertas Pertama Eropa</h4>
+                <p>Stockholms Banco di Swedia menerbitkan uang kertas pertama di Eropa, *Kreditivsedlar*, pada tahun 1661.</p>
+              </div>
+              <div class="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
+                <h4 class="font-bold text-[#A68E7A]">Uang Kertas Pertama AS</h4>
+                <p>Massachusetts Bay Colony mengeluarkan *bills of credit* pada tahun 1690 untuk membiayai militer.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="era-emas" class="scene">
+          <div class="scene-content">
+            <h2 class="text-4xl md:text-5xl font-bold text-[#8C6D53] mb-6 animated-element">Era Standar Emas & Lahirnya The Fed</h2>
+            <p class="mt-4 text-gray-700 leading-relaxed animated-element" style="transition-delay: 0.2s">
+              Pada abad ke-19, dunia mengadopsi Standar Emas, di mana nilai mata uang dipatok pada emas. Sistem ini menawarkan stabilitas, namun kaku dalam menghadapi krisis.
+            </p>
+
+            <div class="mt-12 grid md:grid-cols-2 gap-12 items-center">
+              <div class="animated-element" style="transition-delay: 0.4s">
+                <h3 class="font-bold text-2xl mb-3 text-[#A68E7A]">Pendirian Federal Reserve (1913)</h3>
+                <p class="text-gray-700 mb-4">Sebagai respons atas krisis finansial periodik, AS mendirikan Federal Reserve (The Fed) untuk menciptakan sistem moneter yang lebih stabil dan elastis.</p>
+                <ul class="list-disc list-inside text-gray-700 space-y-1">
+                  <li>Menyediakan mata uang yang elastis.</li>
+                  <li>Bertindak sebagai *lender of last resort*.</li>
+                  <li>Mengawasi sistem perbankan.</li>
+                </ul>
+              </div>
+              <div class="flex justify-center items-center text-8xl text-gray-400 animated-element" style="transition-delay: 0.6s">🏛️</div>
+            </div>
+
+            <div class="mt-12 animated-element" style="transition-delay: 0.8s">
+              <h3 class="font-bold text-2xl text-center mb-6 text-[#A68E7A]">Perbandingan Sistem Moneter</h3>
+              <div class="flex justify-center space-x-2 md:space-x-4 mb-6">
+                <button class="comparison-btn active px-4 py-2 text-sm md:text-base rounded-full font-semibold transition-colors duration-300" data-target="emas">Standar Emas</button>
+                <button class="comparison-btn px-4 py-2 text-sm md:text-base rounded-full font-semibold transition-colors duration-300" data-target="bretton">Bretton Woods</button>
+                <button class="comparison-btn px-4 py-2 text-sm md:text-base rounded-full font-semibold transition-colors duration-300" data-target="fiat">Uang Fiat</button>
+              </div>
+              <div id="comparison-content-3d" class="relative bg-transparent p-0 rounded-lg min-h-[320px]"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="nixon-shock" class="scene">
+          <div class="scene-content">
+            <h2 class="text-4xl md:text-5xl font-bold text-[#8C6D53] mb-6 animated-element">Guncangan Nixon 1971</h2>
+            <p class="mt-4 text-gray-700 leading-relaxed animated-element" style="transition-delay: 0.2s">
+              Pada 15 Agustus 1971, dihadapkan pada inflasi dan defisit, Presiden Nixon secara sepihak mengakhiri konvertibilitas dolar AS ke emas, meruntuhkan sistem Bretton Woods dan mengakhiri peran emas sebagai jangkar moneter global.
+            </p>
+            <div class="mt-12 text-center animated-element" style="transition-delay: 0.4s">
+              <h3 class="font-bold text-2xl mb-6 text-[#A68E7A]">Tiga Kebijakan Utama Nixon Shock</h3>
+              <div class="grid md:grid-cols-3 gap-8">
+                <div class="card-flip-3d animated-element" style="transition-delay: 0.6s">
+                  <div class="card-flip-inner-3d">
+                    <div class="card-face-3d card-front-3d"><p class="font-bold text-lg">Menutup Jendela Emas</p></div>
+                    <div class="card-face-3d card-back-3d"><p class="text-sm">AS menghentikan penukaran dolar dengan emas.</p></div>
+                  </div>
+                </div>
+                <div class="card-flip-3d animated-element" style="transition-delay: 0.8s">
+                  <div class="card-flip-inner-3d">
+                    <div class="card-face-3d card-front-3d"><p class="font-bold text-lg">Pembekuan Upah & Harga</p></div>
+                    <div class="card-face-3d card-back-3d"><p class="text-sm">Upah & harga dibekukan 90 hari untuk melawan inflasi.</p></div>
+                  </div>
+                </div>
+                <div class="card-flip-3d animated-element" style="transition-delay: 1s">
+                  <div class="card-flip-inner-3d">
+                    <div class="card-face-3d card-front-3d"><p class="font-bold text-lg">Tarif Impor 10%</p></div>
+                    <div class="card-face-3d card-back-3d"><p class="text-sm">Biaya tambahan pada impor untuk perbaiki neraca dagang.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="parallax-bg-element" style="top: 10%; right: 10%; transform: translateZ(-300px) rotate(30deg) scale(1.2)">⚡</div>
+        </section>
+
+        <section id="era-fiat" class="scene">
+          <div class="scene-content">
+            <h2 class="text-4xl md:text-5xl font-bold text-[#8C6D53] mb-6 animated-element">Dunia Uang Fiat: Kepercayaan Adalah Segalanya</h2>
+            <p class="mt-4 text-gray-700 leading-relaxed animated-element" style="transition-delay: 0.2s">
+              Setelah Nixon Shock, dunia beralih ke sistem uang fiat. Uang ini tidak dijamin komoditas fisik; nilainya murni berasal dari dekret pemerintah dan kepercayaan kolektif kita.
+            </p>
+            <div class="mt-12 grid md:grid-cols-2 gap-12 items-start">
+              <div class="bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-lg animated-element" style="transition-delay: 0.4s">
+                <h3 class="font-bold text-2xl mb-3 text-[#A68E7A]">Kelebihan Uang Fiat</h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li>**Fleksibilitas Kebijakan:** Bank sentral dapat menyesuaikan suplai uang untuk melawan resesi atau mengendalikan inflasi.</li>
+                  <li>**Biaya Rendah & Elastis:** Lebih murah diproduksi dan suplai dapat tumbuh seiring ekonomi.</li>
+                </ul>
+              </div>
+              <div class="bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-lg animated-element" style="transition-delay: 0.6s">
+                <h3 class="font-bold text-2xl mb-3 text-[#A68E7A]">Kekurangan Uang Fiat</h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li>**Risiko Inflasi:** Tidak ada batasan fisik untuk mencetak uang, berisiko menyebabkan hiperinflasi.</li>
+                  <li>**Bergantung pada Kepercayaan:** Jika kepercayaan pada pemerintah hilang, nilai mata uang bisa runtuh.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mt-12 text-center bg-[#F8F5F1]/70 backdrop-blur-sm p-8 rounded-lg shadow-xl animated-element" style="transition-delay: 0.8s">
+              <h3 class="font-bold text-2xl text-[#A68E7A]">Pelajaran dari Perjalanan Uang</h3>
+              <p class="mt-3 text-gray-700 max-w-3xl mx-auto">
+                Evolusi uang mengajarkan bahwa "uang" adalah konstruksi sosial berbasis **kepercayaan**. Setiap sistem mencerminkan tarik-ulur abadi antara kebutuhan akan **stabilitas** dan **fleksibilitas**.
+              </p>
+            </div>
+          </div>
+          <div class="parallax-bg-element" style="bottom: 20%; left: 15%; transform: translateZ(-320px) rotate(-20deg) scale(0.8)">🌍</div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const animatedElements = document.querySelectorAll(".animated-element");
+        const parallaxBgElements = document.querySelectorAll(".parallax-bg-element");
+        const frbDiagrams = document.querySelectorAll(".frb-diagram");
+
+        const observerCallback = (entries, observerInstance) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+            } else {
+              if (!entry.target.classList.contains("parallax-bg-element")) {
+                entry.target.classList.remove("visible"); // Re-trigger animation on scroll up
+              }
+            }
+          });
+        };
+
+        const observer = new IntersectionObserver(observerCallback, { threshold: 0.2 });
+        animatedElements.forEach((el) => observer.observe(el));
+        parallaxBgElements.forEach((el) => observer.observe(el));
+        frbDiagrams.forEach((el) => observer.observe(el));
+
+        window.addEventListener("scroll", () => {
+          const scrollY = window.scrollY;
+          parallaxBgElements.forEach((el) => {
+            const speed = parseFloat(el.style.transform.match(/translateZ\(([-0-9]+)px\)/)[1]) / -1000 || 0.1;
+            const rotateMatch = el.style.transform.match(/rotate\(([-0-9.]+)deg\)/);
+            const initialRotate = rotateMatch ? parseFloat(rotateMatch[1]) : 0;
+            const scaleMatch = el.style.transform.match(/scale\((.*?)\)/);
+            const initialScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+            el.style.transform = `translateY(${scrollY * speed * 0.5}px) translateZ(${el.style.transform.match(/translateZ\(([-0-9]+)px\)/)[0]}) rotate(${initialRotate + scrollY * speed * 0.05}deg) scale(${initialScale})`;
+          });
+        });
+
+        const sections = document.querySelectorAll(".scene");
+        const navLinks = document.querySelectorAll("#timeline-nav .nav-link");
+        const navObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              const id = entry.target.getAttribute("id");
+              const navLink = document.querySelector(`#timeline-nav .nav-link[data-section="${id}"]`);
+              if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                navLinks.forEach((link) => link.classList.remove("active"));
+                navLink.classList.add("active");
+              }
+            });
+          },
+          { rootMargin: "-40% 0px -60% 0px", threshold: [0.5] }
+        );
+        sections.forEach((section) => navObserver.observe(section));
+
+        const comparisonData = {
+          emas: {
+            title: "Sistem Standar Emas",
+            basis: "Jaminan konvertibilitas ke emas nilai tetap.",
+            kelebihan: "Stabilitas tukar, disiplin moneter.",
+            kekurangan: "Kekakuan, batas pertumbuhan.",
+            peran: "Pemerintah jamin konvertibilitas.",
+          },
+          bretton: {
+            title: "Sistem Bretton Woods",
+            basis: "USD dipatok ke emas; mata uang lain ke USD.",
+            kelebihan: "Mendorong perdagangan pasca-perang.",
+            kekurangan: "Dilema Triffin, bergantung pada ekonomi AS.",
+            peran: "AS menjaga konvertibilitas USD-Emas.",
+          },
+          fiat: { title: "Sistem Uang Fiat", basis: "Kepercayaan & dekret pemerintah.", kelebihan: "Fleksibilitas, biaya rendah.", kekurangan: "Risiko inflasi, tergantung kepercayaan.", peran: "Bank Sentral kelola suplai uang." },
+        };
+
+        const comparisonBtns = document.querySelectorAll(".comparison-btn");
+        const comparisonContentContainer = document.getElementById("comparison-content-3d");
+        let currentComparisonCard = null;
+
+        function updateComparisonContent(target) {
+          if (!comparisonContentContainer) return;
+          const data = comparisonData[target];
+          const newCard = document.createElement("div");
+          newCard.classList.add("comparison-card");
+          newCard.innerHTML = `
+            <h4 class="font-bold text-xl mb-4 text-[#8C6D53]">${data.title}</h4>
+            <div class="space-y-2 text-sm text-gray-700">
+                <p><strong>Basis Nilai:</strong> ${data.basis}</p>
+                <p><strong>Kelebihan:</strong> ${data.kelebihan}</p>
+                <p><strong>Kekurangan:</strong> ${data.kekurangan}</p>
+                <p><strong>Peran Otoritas:</strong> ${data.peran}</p>
+            </div>`;
+          if (currentComparisonCard) {
+            currentComparisonCard.classList.add("exiting");
+            setTimeout(() => {
+              if (currentComparisonCard.parentNode) currentComparisonCard.parentNode.removeChild(currentComparisonCard);
+            }, 600);
+          }
+          comparisonContentContainer.appendChild(newCard);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              newCard.classList.add("active");
+            });
+          });
+          currentComparisonCard = newCard;
+        }
+
+        updateComparisonContent("emas");
+        comparisonBtns.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            comparisonBtns.forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            updateComparisonContent(btn.dataset.target);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
